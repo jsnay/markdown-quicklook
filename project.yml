@@ -44,6 +44,9 @@ targets:
   QLMarkdownExtension:
     type: app-extension
     platform: macOS
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.jeremynay.QLMarkdownApp.QLMarkdownExtension
     sources:
       - QLMarkdownExtension
     dependencies:

@@ -15,3 +15,5 @@ xcuserdata/
 # Generated test fixtures
 tests/fixtures/large.md
 tests/fixtures/invalid-utf8.md
+build.log
+evals.log

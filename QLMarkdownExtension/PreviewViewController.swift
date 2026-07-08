@@ -1,8 +1,11 @@
 import Cocoa
 import Quartz
 import WebKit
+import os.log
 
 final class PreviewViewController: NSViewController, QLPreviewingController {
+
+    private static let logger = Logger(subsystem: "com.jeremynay.qlmarkdown", category: "preview")
 
     private var webView: WKWebView!
 
@@ -22,10 +25,13 @@ final class PreviewViewController: NSViewController, QLPreviewingController {
     // MARK: - QLPreviewingController
 
     func preparePreviewOfFile(at url: URL, completionHandler handler: @escaping (Error?) -> Void) {
+        let start = Date()
         DispatchQueue.global(qos: .userInitiated).async {
-            let html = MarkdownRenderer.renderDocument(at: url)
+            let result = MarkdownRenderer.renderDocument(at: url)
+            let ms = Int(Date().timeIntervalSince(start) * 1000)
+            Self.logger.log("rendered \(url.lastPathComponent, privacy: .public) in \(ms, privacy: .public)ms banner=\(result.banner != nil, privacy: .public)")
             DispatchQueue.main.async { [weak self] in
-                self?.webView.loadHTMLString(html, baseURL: url.deletingLastPathComponent())
+                self?.webView.loadHTMLString(result.html, baseURL: url.deletingLastPathComponent())
                 handler(nil)
             }
         }

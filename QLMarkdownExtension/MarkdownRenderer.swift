@@ -6,17 +6,20 @@ import cmark_gfm_extensions
 /// Never throws: on any failure it degrades to escaped plain text with an error banner.
 enum MarkdownRenderer {
 
+    struct Rendered {
+        let html: String
+        let banner: String?
+    }
+
     // MARK: - Public
 
-    static func renderDocument(at url: URL) -> String {
+    static func renderDocument(at url: URL) -> Rendered {
         let data: Data
         do {
             data = try Data(contentsOf: url)
         } catch {
-            return htmlDocument(
-                body: "<pre></pre>",
-                banner: "Could not read file: \(escape(error.localizedDescription))"
-            )
+            let banner = "Could not read file: \(escape(error.localizedDescription))"
+            return Rendered(html: htmlDocument(body: "<pre></pre>", banner: banner), banner: banner)
         }
 
         var banner: String? = nil
@@ -30,13 +33,14 @@ enum MarkdownRenderer {
         }
 
         if let body = gfmToHTML(markdown) {
-            return htmlDocument(body: body, banner: banner)
+            return Rendered(html: htmlDocument(body: body, banner: banner), banner: banner)
         }
 
         // Parser failure: show raw text rather than a blank panel.
-        return htmlDocument(
-            body: "<pre>\(escape(markdown))</pre>",
-            banner: banner ?? "Markdown could not be parsed; showing raw text."
+        let failBanner = banner ?? "Markdown could not be parsed; showing raw text."
+        return Rendered(
+            html: htmlDocument(body: "<pre>\(escape(markdown))</pre>", banner: failBanner),
+            banner: failBanner
         )
     }
 
