@@ -1,0 +1,17 @@
+# Xcode / build output
+build/
+DerivedData/
+*.xcodeproj
+xcuserdata/
+*.xcuserstate
+
+# SPM
+.swiftpm/
+.build/
+
+# macOS
+.DS_Store
+
+# Generated test fixtures
+tests/fixtures/large.md
+tests/fixtures/invalid-utf8.md

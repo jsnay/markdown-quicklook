@@ -1,0 +1,80 @@
+name: QLMarkdown
+options:
+  bundleIdPrefix: com.jeremynay
+  deploymentTarget:
+    macOS: "13.0"
+  createIntermediateGroups: true
+
+packages:
+  swift-cmark:
+    url: https://github.com/swiftlang/swift-cmark
+    branch: gfm
+
+settings:
+  base:
+    CODE_SIGN_STYLE: Automatic
+    SWIFT_VERSION: "5.9"
+    MARKETING_VERSION: "1.0.0"
+    CURRENT_PROJECT_VERSION: "1"
+    ENABLE_HARDENED_RUNTIME: YES
+
+targets:
+  QLMarkdownApp:
+    type: application
+    platform: macOS
+    sources:
+      - QLMarkdownApp
+    dependencies:
+      - target: QLMarkdownExtension
+        embed: true
+    entitlements:
+      path: QLMarkdownApp/QLMarkdownApp.entitlements
+      properties:
+        com.apple.security.app-sandbox: true
+    info:
+      path: QLMarkdownApp/Info.plist
+      properties:
+        CFBundleDisplayName: QLMarkdown
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
+        LSApplicationCategoryType: public.app-category.utilities
+        LSMinimumSystemVersion: $(MACOSX_DEPLOYMENT_TARGET)
+        NSHumanReadableCopyright: "© 2026 Jeremy Nay"
+
+  QLMarkdownExtension:
+    type: app-extension
+    platform: macOS
+    sources:
+      - QLMarkdownExtension
+    dependencies:
+      - package: swift-cmark
+        product: cmark-gfm
+      - package: swift-cmark
+        product: cmark-gfm-extensions
+    entitlements:
+      path: QLMarkdownExtension/QLMarkdownExtension.entitlements
+      properties:
+        com.apple.security.app-sandbox: true
+    info:
+      path: QLMarkdownExtension/Info.plist
+      properties:
+        CFBundleDisplayName: Markdown Preview
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
+        NSExtension:
+          NSExtensionPointIdentifier: com.apple.quicklook.preview
+          NSExtensionPrincipalClass: $(PRODUCT_MODULE_NAME).PreviewViewController
+          NSExtensionAttributes:
+            QLIsDataBasedPreview: false
+            QLSupportedContentTypes:
+              - net.daringfireball.markdown
+              - public.markdown
+              - com.unknownsuffix.markdown
+
+schemes:
+  QLMarkdownApp:
+    build:
+      targets:
+        QLMarkdownApp: all
+    run:
+      config: Release
