@@ -13,13 +13,13 @@ enum MarkdownRenderer {
 
     // MARK: - Public
 
-    static func renderDocument(at url: URL) -> Rendered {
+    static func renderDocument(at url: URL, isDark: Bool = false) -> Rendered {
         let data: Data
         do {
             data = try Data(contentsOf: url)
         } catch {
             let banner = "Could not read file: \(escape(error.localizedDescription))"
-            return Rendered(html: htmlDocument(body: "<pre></pre>", banner: banner), banner: banner)
+            return Rendered(html: htmlDocument(body: "<pre></pre>", banner: banner, isDark: isDark), banner: banner)
         }
 
         var banner: String? = nil
@@ -33,13 +33,13 @@ enum MarkdownRenderer {
         }
 
         if let body = gfmToHTML(markdown) {
-            return Rendered(html: htmlDocument(body: body, banner: banner), banner: banner)
+            return Rendered(html: htmlDocument(body: body, banner: banner, isDark: isDark), banner: banner)
         }
 
         // Parser failure: show raw text rather than a blank panel.
         let failBanner = banner ?? "Markdown could not be parsed; showing raw text."
         return Rendered(
-            html: htmlDocument(body: "<pre>\(escape(markdown))</pre>", banner: failBanner),
+            html: htmlDocument(body: "<pre>\(escape(markdown))</pre>", banner: failBanner, isDark: isDark),
             banner: failBanner
         )
     }
@@ -74,14 +74,19 @@ enum MarkdownRenderer {
 
     // MARK: - HTML assembly
 
-    private static func htmlDocument(body: String, banner: String?) -> String {
+    private static func htmlDocument(body: String, banner: String?, isDark: Bool) -> String {
         let bannerHTML = banner.map {
             #"<div class="error-banner">⚠️ \#($0)</div>"#
         } ?? ""
 
+        // The theme is stamped explicitly (data-theme) because prefers-color-scheme
+        // does not reliably resolve to the system appearance inside a Quick Look
+        // WKWebView. The media query in the CSS remains as a fallback.
+        let theme = isDark ? "dark" : "light"
+
         return """
         <!DOCTYPE html>
-        <html>
+        <html data-theme="\(theme)">
         <head>
         <meta charset="utf-8">
         <meta name="color-scheme" content="light dark">

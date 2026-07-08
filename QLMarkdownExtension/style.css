@@ -1,7 +1,11 @@
-/* GitHub-flavored Markdown styling with automatic light/dark mode. */
+/* GitHub-flavored Markdown styling.
+   Theme is driven by an explicit [data-theme] attribute stamped by the
+   extension (prefers-color-scheme is unreliable inside a Quick Look WKWebView).
+   The media query is kept only as a fallback for when no attribute is present. */
 
 :root {
   color-scheme: light dark;
+  /* Light theme defaults */
   --fg: #1f2328;
   --fg-muted: #59636e;
   --bg: #ffffff;
@@ -14,8 +18,22 @@
   --banner-border: #d4a72c66;
 }
 
+/* Dark palette, shared by explicit attribute and media-query fallback. */
+:root[data-theme="dark"] {
+  --fg: #f0f6fc;
+  --fg-muted: #9198a1;
+  --bg: #212121;
+  --bg-code: rgba(101, 108, 118, 0.3);
+  --bg-pre: #171717;
+  --border: #3d444d;
+  --border-muted: #3d444db3;
+  --accent: #4493f8;
+  --banner-bg: #3a2d12;
+  --banner-border: #d4a72c66;
+}
+
 @media (prefers-color-scheme: dark) {
-  :root {
+  :root:not([data-theme]) {
     --fg: #f0f6fc;
     --fg-muted: #9198a1;
     --bg: #212121;
@@ -27,6 +45,20 @@
     --banner-bg: #3a2d12;
     --banner-border: #d4a72c66;
   }
+}
+
+/* Explicit light attribute forces the light palette even if the OS is dark. */
+:root[data-theme="light"] {
+  --fg: #1f2328;
+  --fg-muted: #59636e;
+  --bg: #ffffff;
+  --bg-code: rgba(129, 139, 152, 0.15);
+  --bg-pre: #f6f8fa;
+  --border: #d1d9e0;
+  --border-muted: #d1d9e0b3;
+  --accent: #0969da;
+  --banner-bg: #fff8c5;
+  --banner-border: #d4a72c66;
 }
 
 * { box-sizing: border-box; }

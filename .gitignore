@@ -17,3 +17,5 @@ tests/fixtures/large.md
 tests/fixtures/invalid-utf8.md
 build.log
 evals.log
+.ql-check.png
+.shot-*.png
