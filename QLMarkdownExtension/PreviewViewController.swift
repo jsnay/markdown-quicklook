@@ -13,12 +13,12 @@ final class AppearanceReportingView: NSView {
     }
 }
 
-final class PreviewViewController: NSViewController, QLPreviewingController {
+final class PreviewViewController: NSViewController, QLPreviewingController, WKNavigationDelegate {
 
     private static let logger = Logger(subsystem: "com.jeremynay.qlmarkdown", category: "preview")
 
     private var webView: WKWebView!
-    private var renderedHTML: String?
+    private var completion: ((Error?) -> Void)?
 
     override func loadView() {
         let root = AppearanceReportingView(frame: NSRect(x: 0, y: 0, width: 800, height: 600))
@@ -30,6 +30,7 @@ final class PreviewViewController: NSViewController, QLPreviewingController {
 
         webView = WKWebView(frame: view.bounds, configuration: configuration)
         webView.autoresizingMask = [.width, .height]
+        webView.navigationDelegate = self
         // Keep the web view opaque and painting its own background. A transparent
         // web view lets whatever is behind the Quick Look panel bleed through.
         webView.setValue(true, forKey: "drawsBackground")
@@ -37,6 +38,16 @@ final class PreviewViewController: NSViewController, QLPreviewingController {
     }
 
     // MARK: - QLPreviewingController
+
+    /// How long to wait for `webView(_:didFinish:)` before telling Quick Look
+    /// we're ready anyway. Inside a Quick Look extension the web view is not in
+    /// an on-screen window while QL waits on the completion handler, and WebKit
+    /// does not reliably deliver navigation callbacks to a detached view — so
+    /// gating solely on `didFinish` hangs the panel on an infinite spinner.
+    /// The preview is a live remote view (not a one-shot snapshot), so firing
+    /// the handler before paint completes is safe: content appears as soon as
+    /// WebKit commits it.
+    private static let completionFallbackDelay: TimeInterval = 0.5
 
     func preparePreviewOfFile(at url: URL, completionHandler handler: @escaping (Error?) -> Void) {
         let start = Date()
@@ -46,12 +57,47 @@ final class PreviewViewController: NSViewController, QLPreviewingController {
             let ms = Int(Date().timeIntervalSince(start) * 1000)
             Self.logger.log("rendered \(url.lastPathComponent, privacy: .public) in \(ms, privacy: .public)ms dark=\(dark, privacy: .public) banner=\(result.banner != nil, privacy: .public)")
             DispatchQueue.main.async { [weak self] in
-                guard let self else { return }
-                self.renderedHTML = result.html
-                self.webView.loadHTMLString(result.html, baseURL: url.deletingLastPathComponent())
-                handler(nil)
+                guard let self else {
+                    handler(nil)
+                    return
+                }
+                self.completion = handler
+                // baseURL is nil on purpose: all CSS is inlined, so no external
+                // resources are needed, and a file:// baseURL trips the extension
+                // sandbox (it only has read access to the single previewed file).
+                self.webView.loadHTMLString(result.html, baseURL: nil)
+                // Race didFinish against a short fallback so Quick Look never
+                // waits forever if WebKit drops the navigation callback.
+                DispatchQueue.main.asyncAfter(deadline: .now() + Self.completionFallbackDelay) { [weak self] in
+                    guard let self, self.completion != nil else { return }
+                    Self.logger.log("didFinish not delivered within \(Self.completionFallbackDelay, privacy: .public)s; completing via fallback")
+                    self.finishPreview()
+                }
             }
         }
+    }
+
+    /// Invokes the stored Quick Look completion handler exactly once.
+    private func finishPreview(_ error: Error? = nil) {
+        guard let handler = completion else { return }
+        completion = nil
+        handler(error)
+    }
+
+    // MARK: - WKNavigationDelegate
+
+    func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
+        finishPreview()
+    }
+
+    func webView(_ webView: WKWebView, didFail navigation: WKNavigation!, withError error: Error) {
+        Self.logger.error("navigation failed: \(error.localizedDescription, privacy: .public)")
+        finishPreview() // Don't fail the preview; show whatever rendered.
+    }
+
+    func webView(_ webView: WKWebView, didFailProvisionalNavigation navigation: WKNavigation!, withError error: Error) {
+        Self.logger.error("provisional navigation failed: \(error.localizedDescription, privacy: .public)")
+        finishPreview()
     }
 
     // MARK: - Live appearance switching (E3)

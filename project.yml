@@ -58,6 +58,10 @@ targets:
       path: QLMarkdownExtension/QLMarkdownExtension.entitlements
       properties:
         com.apple.security.app-sandbox: true
+        # WKWebView routes all loads — including loadHTMLString — through its
+        # networking XPC service. Without this entitlement the sandbox blocks
+        # that service, navigation never commits, and the preview stays blank.
+        com.apple.security.network.client: true
     info:
       path: QLMarkdownExtension/Info.plist
       properties:
